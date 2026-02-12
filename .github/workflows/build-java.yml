@@ -149,47 +149,58 @@ jobs:
             os-name: windows
             arch: x64
           
-          # Windows aarch64 - 所有版本，使用 ARM64 runner
-          - java-version: '8'
-            java-version-exact: '8.0.432+6'
-            java-display: '8'
-            os: windows-11-arm64
-            os-name: windows
-            arch: aarch64
-          - java-version: '11'
-            java-version-exact: '11.0.25+9'
-            java-display: '11'
-            os: windows-11-arm64
-            os-name: windows
-            arch: aarch64
-          - java-version: '17'
-            java-version-exact: '17.0.13+11'
-            java-display: '17'
-            os: windows-11-arm64
-            os-name: windows
-            arch: aarch64
-          - java-version: '21'
-            java-version-exact: '21.0.5+11'
-            java-display: '21'
-            os: windows-11-arm64
-            os-name: windows
-            arch: aarch64
-          - java-version: '23'
-            java-version-exact: '23.0.1+11'
-            java-display: '23'
-            os: windows-11-arm64
-            os-name: windows
-            arch: aarch64
+          # Windows aarch64 - 暂时注释，等待 GitHub Actions 提供公共 ARM64 runner
+          # 当前 GitHub Actions 没有提供 windows-11-arm64 公共 runner
+          # 如需构建，请使用 self-hosted runner
+          # - java-version: '8'
+          #   java-version-exact: '8.0.432+6'
+          #   java-display: '8'
+          #   os: windows-11-arm64
+          #   os-name: windows
+          #   arch: aarch64
+          # - java-version: '11'
+          #   java-version-exact: '11.0.25+9'
+          #   java-display: '11'
+          #   os: windows-11-arm64
+          #   os-name: windows
+          #   arch: aarch64
+          # - java-version: '17'
+          #   java-version-exact: '17.0.13+11'
+          #   java-display: '17'
+          #   os: windows-11-arm64
+          #   os-name: windows
+          #   arch: aarch64
+          # - java-version: '21'
+          #   java-version-exact: '21.0.5+11'
+          #   java-display: '21'
+          #   os: windows-11-arm64
+          #   os-name: windows
+          #   arch: aarch64
+          # - java-version: '23'
+          #   java-version-exact: '23.0.1+11'
+          #   java-display: '23'
+          #   os: windows-11-arm64
+          #   os-name: windows
+          #   arch: aarch64
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Java ${{ matrix.java-display }}
+      - name: Setup Java ${{ matrix.java-display }} (Temurin)
+        if: "!(matrix.os-name == 'macos' && matrix.arch == 'aarch64' && matrix.java-version == '8')"
         uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'  # Eclipse Temurin - 统一使用
-          java-version: ${{ matrix.java-version }}  # 使用主版本号
+          distribution: 'temurin'  # Eclipse Temurin
+          java-version: ${{ matrix.java-version }}
+          architecture: ${{ matrix.arch }}
+
+      - name: Setup Java ${{ matrix.java-display }} (Zulu for macOS ARM64)
+        if: matrix.os-name == 'macos' && matrix.arch == 'aarch64' && matrix.java-version == '8'
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'  # Azul Zulu 支持 macOS ARM64 Java 8
+          java-version: ${{ matrix.java-version }}
           architecture: ${{ matrix.arch }}
 
       - name: Get Java info
