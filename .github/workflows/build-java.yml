@@ -2,16 +2,9 @@ name: Build Java Archive
 
 on:
   push:
-    branches: [ main, master ]
     tags:
       - 'v*'
       - 'release-*'
-  pull_request:
-    branches: [ main, master ]
-  workflow_dispatch:
-  schedule:
-    # 每周日运行一次，自动更新
-    - cron: '0 0 * * 0'
 
 jobs:
   build:
