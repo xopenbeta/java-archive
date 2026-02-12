@@ -8,10 +8,12 @@
 
 | Java 版本 | 发行版 | 说明 |
 |-----------|--------|------|
-| Java 8 | Azul Zulu | 对 Java 8 支持最佳，免费生产使用 |
-| Java 11+ | Eclipse Temurin | 社区驱动，TCK 认证，推荐首选 |
+| Java 8-23 | Eclipse Temurin | 社区驱动，TCK 认证，统一使用 |
 
-> **关于 Java 8**: Eclipse Temurin 对 Java 8 的 API 支持有限制，我们使用 Azul Zulu 发行版来确保稳定性。Zulu 为 Java 8 提供免费的长期支持和安全更新（至少到 2030 年）。
+> **版本策略**: 
+> - 使用主版本号（如 '8', '11', '17', '21'），自动获取最新的安全补丁版本
+> - 确保始终使用最新的稳定和安全更新
+> - Eclipse Temurin 为所有支持的版本提供一致的体验
 
 ### macOS (全部在 Apple Silicon 上编译)
 - **x64** (适用于 Intel 芯片 Mac) - 在 macOS 14 上交叉编译
@@ -33,8 +35,8 @@
 构建会在以下情况下自动触发：
 **使用标签触发构建**:
 ```bash
-git tag v202602121408
-git push origin v202602121408
+git tag v202602121418
+git push origin v202602121418
 ```
 
 ### 构建矩阵
@@ -48,16 +50,5 @@ platforms:
   - macOS aarch64 (原生编译)
   - Linux x64
   - Windows x64
-  - Windows aarch64 (仅 17, 21, 23)
+  - Windows aarch64
 ```
-
-**总计: 28 个构建任务** (Java 8-11: 4平台 × 2版本 + Java 17-23: 5平台 × 3版本)
-
-#### 为什么 Java 8 使用不同的发行版？
-
-Eclipse Temurin 对 Java 8 的 API 支持在 GitHub Actions 中存在限制，会导致版本解析错误。为确保稳定性和兼容性，我们为 Java 8 选用 **Azul Zulu**：
-
-- ✅ **免费商用**: Zulu 对所有版本（包括 Java 8）提供免费使用
-- ✅ **长期支持**: 提供安全更新至少到 2030 年
-- ✅ **完整兼容**: 100% 通过 Java TCK 认证
-- ✅ **广泛使用**: 被 Azure、Alpine Linux 等采用
