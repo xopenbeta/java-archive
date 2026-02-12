@@ -1,0 +1,202 @@
+name: Build Java Archive
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+  schedule:
+    # 每周日运行一次，自动更新
+    - cron: '0 0 * * 0'
+
+jobs:
+  build:
+    name: Build Java ${{ matrix.java-version }} on ${{ matrix.os }} (${{ matrix.arch }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # Java 主要版本
+        java-version: ['8', '11', '17', '21', '23']
+        
+        # 操作系统和架构组合
+        include:
+          # macOS Intel (x64)
+          - os: macos-13
+            os-name: macos
+            arch: x64
+          
+          # macOS Apple Silicon (arm64)
+          - os: macos-14
+            os-name: macos
+            arch: aarch64
+          
+          # Linux x64
+          - os: ubuntu-22.04
+            os-name: linux
+            arch: x64
+          
+          # Linux arm64
+          - os: ubuntu-22.04-arm64
+            os-name: linux
+            arch: aarch64
+          
+          # Windows x64
+          - os: windows-2022
+            os-name: windows
+            arch: x64
+          
+          # Windows ARM64
+          - os: windows-2022
+            os-name: windows
+            arch: aarch64
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Java ${{ matrix.java-version }}
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'  # Eclipse Temurin (原 AdoptOpenJDK)
+          java-version: ${{ matrix.java-version }}
+          architecture: ${{ matrix.arch }}
+
+      - name: Get Java info
+        shell: bash
+        run: |
+          echo "Java version:"
+          java -version
+          echo "JAVA_HOME: $JAVA_HOME"
+          echo "Architecture: $(uname -m)"
+
+      - name: Create archive directory
+        shell: bash
+        run: |
+          mkdir -p archives
+
+      - name: Package Java (Unix)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          ARCHIVE_NAME="jdk-${{ matrix.java-version }}-${{ matrix.os-name }}-${{ matrix.arch }}.tar.gz"
+          cd "$JAVA_HOME"
+          tar -czf "$GITHUB_WORKSPACE/archives/$ARCHIVE_NAME" .
+          echo "Archive created: $ARCHIVE_NAME"
+          ls -lh "$GITHUB_WORKSPACE/archives/$ARCHIVE_NAME"
+
+      - name: Package Java (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $ARCHIVE_NAME = "jdk-${{ matrix.java-version }}-${{ matrix.os-name }}-${{ matrix.arch }}.zip"
+          Compress-Archive -Path "$env:JAVA_HOME\*" -DestinationPath "archives\$ARCHIVE_NAME"
+          Write-Host "Archive created: $ARCHIVE_NAME"
+          Get-Item "archives\$ARCHIVE_NAME" | Format-List
+
+      - name: Generate checksums (Unix)
+        if: runner.os != 'Windows'
+        shell: bash
+        working-directory: archives
+        run: |
+          for file in *; do
+            if [ -f "$file" ]; then
+              sha256sum "$file" > "$file.sha256"
+              echo "Generated checksum for $file"
+            fi
+          done
+
+      - name: Generate checksums (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        working-directory: archives
+        run: |
+          Get-ChildItem -File | Where-Object { $_.Extension -eq '.zip' } | ForEach-Object {
+            $hash = Get-FileHash -Algorithm SHA256 -Path $_.FullName
+            "$($hash.Hash.ToLower())  $($_.Name)" | Out-File -FilePath "$($_.Name).sha256" -Encoding ASCII
+            Write-Host "Generated checksum for $($_.Name)"
+          }
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: jdk-${{ matrix.java-version }}-${{ matrix.os-name }}-${{ matrix.arch }}
+          path: |
+            archives/*
+          retention-days: 90
+          compression-level: 0  # 已经压缩过了
+
+  create-release:
+    name: Create Release
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+    
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: all-archives
+
+      - name: Display structure
+        run: |
+          ls -R all-archives
+
+      - name: Merge artifacts
+        run: |
+          mkdir -p release-archives
+          find all-archives -type f -exec cp {} release-archives/ \;
+          ls -lh release-archives/
+
+      - name: Generate release notes
+        run: |
+          cat > release-notes.md << 'EOF'
+          # Java Archive Builds
+          
+          This release contains pre-built Java Development Kit (JDK) packages for multiple versions and platforms.
+          
+          ## Supported Versions
+          - Java 8
+          - Java 11
+          - Java 17
+          - Java 21
+          - Java 23
+          
+          ## Supported Platforms
+          - **macOS**: x64 (Intel), arm64 (Apple Silicon)
+          - **Linux**: x64, arm64
+          - **Windows**: x64, x86
+          
+          ## Usage
+          1. Download the appropriate archive for your platform
+          2. Extract the archive
+          3. Set `JAVA_HOME` to the extracted directory
+          4. Add `$JAVA_HOME/bin` to your `PATH`
+          
+          ## Verification
+          Each archive includes a `.sha256` checksum file for verification:
+          ```bash
+          # Unix/Linux/macOS
+          sha256sum -c <archive-file>.sha256
+          
+          # Windows PowerShell
+          Get-FileHash <archive-file>.zip -Algorithm SHA256
+          ```
+          
+          Generated on: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+          Commit: ${{ github.sha }}
+          EOF
+          cat release-notes.md
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: build-${{ github.run_number }}
+          name: Java Archive Build #${{ github.run_number }}
+          body_path: release-notes.md
+          files: release-archives/*
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
