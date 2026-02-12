@@ -156,23 +156,35 @@ jobs:
             os-name: windows
             arch: x64
           
-          # Windows aarch64 - 仅 17+ 支持
+          # Windows aarch64 - 所有版本，使用 ARM64 runner
+          - java-version: '8'
+            java-version-exact: '8.0.432+6'
+            java-display: '8'
+            os: windows-11-arm64
+            os-name: windows
+            arch: aarch64
+          - java-version: '11'
+            java-version-exact: '11.0.25+9'
+            java-display: '11'
+            os: windows-11-arm64
+            os-name: windows
+            arch: aarch64
           - java-version: '17'
             java-version-exact: '17.0.13+11'
             java-display: '17'
-            os: windows-2022
+            os: windows-11-arm64
             os-name: windows
             arch: aarch64
           - java-version: '21'
             java-version-exact: '21.0.5+11'
             java-display: '21'
-            os: windows-2022
+            os: windows-11-arm64
             os-name: windows
             arch: aarch64
           - java-version: '23'
             java-version-exact: '23.0.1+11'
             java-display: '23'
-            os: windows-2022
+            os: windows-11-arm64
             os-name: windows
             arch: aarch64
 
@@ -226,7 +238,11 @@ jobs:
         run: |
           for file in *; do
             if [ -f "$file" ]; then
-              sha256sum "$file" > "$file.sha256"
+              if command -v sha256sum > /dev/null; then
+                sha256sum "$file" > "$file.sha256"
+              else
+                shasum -a 256 "$file" > "$file.sha256"
+              fi
               echo "Generated checksum for $file"
             fi
           done
@@ -301,8 +317,11 @@ jobs:
           ## Verification
           Each archive includes a `.sha256` checksum file for verification:
           ```bash
-          # Unix/Linux/macOS
+          # Linux
           sha256sum -c <archive-file>.sha256
+          
+          # macOS
+          shasum -a 256 -c <archive-file>.sha256
           
           # Windows PowerShell
           Get-FileHash <archive-file>.zip -Algorithm SHA256

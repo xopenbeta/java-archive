@@ -25,8 +25,10 @@
 - **x64** (AMD64)
 
 ### Windows
-- **x64** (64位)
-- **aarch64** (ARM 64位) - 仅 Java 17, 21, 23
+- **x64** (64位) - 在 Windows Server 2022 (x64) 上编译
+- **aarch64** (ARM 64位) - 在 Windows 11 ARM64 runner 上原生编译，支持 Java 8, 11, 17, 21, 23
+
+> **Windows ARM64 说明**: 使用原生 Windows ARM64 runner 编译，完全支持所有 Java 版本，适用于 Surface Pro X、Copilot+ PC 等 ARM 设备。
 
 ## 🤖 自动构建
 
@@ -35,8 +37,8 @@
 构建会在以下情况下自动触发：
 **使用标签触发构建**:
 ```bash
-git tag v202602121418
-git push origin v202602121418
+git tag v202602121419
+git push origin v202602121419
 ```
 
 ### 构建矩阵
@@ -50,5 +52,8 @@ platforms:
   - macOS aarch64 (原生编译)
   - Linux x64
   - Windows x64
-  - Windows aarch64
+  - Windows aarch64 (原生编译)
+```
+
+**总计: 33 个构建任务** - 每个 Java 版本支持 5 个平台，完全覆盖主流操作系统和架构。
 ```
