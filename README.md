@@ -39,8 +39,8 @@
 构建会在以下情况下自动触发：
 **使用标签触发构建**:
 ```bash
-git tag v202602121446
-git push origin v202602121446
+git tag v202602121454
+git push origin v202602121454
 ```
 
 ### 构建矩阵
